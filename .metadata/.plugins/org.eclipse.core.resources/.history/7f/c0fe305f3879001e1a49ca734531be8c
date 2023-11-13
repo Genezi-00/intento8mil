@@ -1,0 +1,128 @@
+package com.auditoriainterna.controller;
+
+import java.util.List;
+import java.util.Optional;
+
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.ModelAttribute;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+
+
+import com.auditoriainterna.model.Empleado;
+import com.auditoriainterna.model.Entrevista;
+
+
+import com.auditoriainterna.service.EmpleadoService;
+import com.auditoriainterna.service.EntrevistaService;
+
+
+@Controller
+public class EntrevistaController {
+
+	@Autowired
+	private EntrevistaService entrevistaService;
+	
+	@Autowired
+	private EmpleadoService empleadoService;
+	
+	@GetMapping("/entrevista/{codigoAuditoria}")
+    public String listarEntrevistasPorCodigoAuditoria(@PathVariable int codigoAuditoria, Model model) {
+        List<Entrevista>entrevistas= entrevistaService.obtenerEntrevistasPorCodigoAuditoria(codigoAuditoria);
+        int codigo=codigoAuditoria;
+        model.addAttribute("codigo", codigo);
+        model.addAttribute("entrevistas", entrevistas);
+        return "entrevista";
+    }
+	/*SI FUNCIONA*/
+	@RequestMapping("/cargaEntrevista")
+	@ResponseBody
+	public List<Entrevista>lista(){
+		return entrevistaService.obtenerEntrevistasPorCodigoAuditoria(1001);
+	}
+	@RequestMapping("/cargaEntre")
+	@ResponseBody
+	public List<Entrevista> listado(){
+		return entrevistaService.listaEntrevistas();
+	}
+	
+	//Para Entrevistas busqueda de dni y llenado de campos
+		@GetMapping("/entrevista/crear/{codigo}")
+		public String formularioEntrevista(@PathVariable int codigo,Model model) {
+			int _codigo=codigo;
+			model.addAttribute("codigo", _codigo);
+			model.addAttribute("empleado", new Empleado());
+			return "formEntrevista";
+		}
+		//aca podriamos cambiar
+		@PostMapping("/entrevista/crear/{codigo}")
+	    public String buscarPorDNI(@PathVariable int codigo,@ModelAttribute Empleado e, Model model) {
+			
+			Empleado empleado = empleadoService.obtenerEmpleadoPorDni(e.getDNI());
+	        if (empleado != null) {
+	            model.addAttribute("empleadoDni", empleado);
+	            int _codigo=codigo;
+				model.addAttribute("codigo", _codigo);
+				model.addAttribute("entrevista", new Entrevista());
+				
+				String pregunta1="", pregunta2="", pregunta3="";
+				/*CARGO DE TI*/
+				if(empleado.getCargo().equals("Analista de Datos")) {
+					pregunta1="¿Cómo se recopilan, almacenan y procesan los datos de la empresa?";
+					pregunta2="¿Qué medidas se toman para garantizar la integridad y la seguridad de los datos analizados?";
+					pregunta3="¿Cómo se utiliza la información obtenida para tomar decisiones empresariales estratégicas?";
+				}
+				else if(empleado.getCargo().equals("Especialista en Desarrollo Web")) {
+					pregunta1="¿Cómo se garantiza la funcionalidad y la usabilidad de los sitios web y las aplicaciones desarrolladas?";
+					pregunta2="¿Qué medidas se toman para optimizar el rendimiento y la velocidad de los sitios web y las aplicaciones?";
+					pregunta3="¿Cómo se abordan las preocupaciones de seguridad en el desarrollo y mantenimiento de sitios web y aplicaciones?";
+				}
+				else if(empleado.getCargo().equals("Especialista en Soporte Técnico")) {
+					pregunta1="¿Cómo se gestionan y se priorizan los problemas reportados por los usuarios?";
+					pregunta2="¿Qué medidas se toman para asegurar una comunicación clara y efectiva con los usuarios durante el proceso de resolución de problemas?";
+					pregunta3="¿Cómo se realiza el seguimiento de la satisfacción del cliente después de la resolución de problemas?";
+				}
+				
+				model.addAttribute("pregunta1", pregunta1);
+				model.addAttribute("pregunta2", pregunta2);
+				model.addAttribute("pregunta3", pregunta3);
+				
+	        } else {
+	            model.addAttribute("mensaje", "Empleado no encontrado");
+	        }
+	        return "formEntrevista";
+	    }
+	
+		@PostMapping("/entrevista/guardar")
+		public String  guardarEntrevista(@ModelAttribute("entrevista") Entrevista entrevista) {
+			entrevistaService.crearEntrevista(entrevista);
+			return "redirect:/auditoria";//cambia redireccionamiento
+		}
+		
+		@GetMapping("/entrevista/editar/{id}/{dni}")
+		public String editarEntrevista(@PathVariable int id,@PathVariable int dni, Model model) {
+			Optional<Entrevista> entrevista=entrevistaService.listaId(id);			
+			model.addAttribute("entrevista", entrevista);
+			
+			Empleado empleado = empleadoService.obtenerEmpleadoPorDni(dni);
+			model.addAttribute("empleado", empleado);
+					
+			//aca tambien va
+			
+			return "formActualizarEntrevista";
+		}
+		
+		@GetMapping("/entrevista/eliminar/{id}")
+		public String eliminar(Model model, @PathVariable int id) {
+			entrevistaService.eliminar(id);
+			return "redirect:/auditoria"; //cambiar redirecionamiento
+		}
+		
+		
+		
+}
